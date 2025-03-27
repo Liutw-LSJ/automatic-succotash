@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线学习平台</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .nav button {
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        input, button {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>在线学习平台</h1>
+
+        <!-- 导航栏 -->
+        <div class="nav">
+            <button onclick="showSection('recommend')">获取推荐</button>
+            <button onclick="showSection('createUser')">用户注册</button>
+            <button onclick="showSection('createCourse')">创建课程</button>
+            <button onclick="showSection('createRecord')">学习记录</button>
+        </div>
+
+        <!-- 推荐模块 -->
+        <div id="recommend" class="section">
+            <h2>课程推荐</h2>
+            <form onsubmit="getRecommendations(event)">
+                <input type="number" id="userId" placeholder="输入用户ID" required>
+                <button type="submit">获取推荐</button>
+            </form>
+            <div class="result" id="recommendResult"></div>
+        </div>
+
+        <!-- 用户注册模块 -->
+        <div id="createUser" class="section" style="display: none;">
+            <h2>用户注册</h2>
+            <form onsubmit="createUser(event)">
+                <input type="text" id="username" placeholder="用户名" required>
+                <button type="submit">注册</button>
+            </form>
+            <div class="result" id="userResult"></div>
+        </div>
+
+        <!-- 课程创建模块 -->
+        <div id="createCourse" class="section" style="display: none;">
+            <h2>创建课程</h2>
+            <form onsubmit="createCourse(event)">
+                <input type="text" id="courseTitle" placeholder="课程标题" required>
+                <input type="text" id="courseCategory" placeholder="课程分类" required>
+                <button type="submit">创建</button>
+            </form>
+            <div class="result" id="courseResult"></div>
+        </div>
+
+        <!-- 学习记录模块 -->
+        <div id="createRecord" class="section" style="display: none;">
+            <h2>添加学习记录</h2>
+            <form onsubmit="createRecord(event)">
+                <input type="number" id="recordUserId" placeholder="用户ID" required>
+                <input type="number" id="recordCourseId" placeholder="课程ID" required>
+                <input type="number" step="0.1" id="recordProgress" placeholder="学习进度 (0-1)" required>
+                <button type="submit">提交</button>
+            </form>
+            <div class="result" id="recordResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // 显示/隐藏模块
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(div => {
+                div.style.display = 'none';
+            });
+            document.getElementById(sectionId).style.display = 'block';
+        }
+
+        // 获取推荐课程
+        async function getRecommendations(event) {
+            event.preventDefault();
+            const userId = document.getElementById('userId').value;
+            const resultDiv = document.getElementById('recommendResult');
+
+            try {
+                const response = await fetch(`http://localhost:8000/users/${userId}/recommendations`);
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.detail || '请求失败');
+
+                resultDiv.innerHTML = data.recommended_courses.length
+                    ? `<strong>推荐课程：</strong><ul>${
+                        data.recommended_courses.map(course => `<li>${course}</li>`).join('')
+                      }</ul>`
+                    : "暂无推荐课程";
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">错误：${error.message}</div>`;
+            }
+        }
+
+        // 创建用户
+        async function createUser(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const resultDiv = document.getElementById('userResult');
+
+            try {
+                const response = await fetch('http://localhost:8000/users/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || '注册失败');
+
+                resultDiv.innerHTML = `注册成功！用户ID：${data.user_id}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">错误：${error.message}</div>`;
+            }
+        }
+
+        // 创建课程
+        async function createCourse(event) {
+            event.preventDefault();
+            const title = document.getElementById('courseTitle').value;
+            const category = document.getElementById('courseCategory').value;
+            const resultDiv = document.getElementById('courseResult');
+
+            try {
+                const response = await fetch('http://localhost:8000/courses/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ title, category })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || '创建失败');
+
+                resultDiv.innerHTML = `课程创建成功！课程ID：${data.course_id}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">错误：${error.message}</div>`;
+            }
+        }
+
+        // 添加学习记录
+        async function createRecord(event) {
+            event.preventDefault();
+            const userId = document.getElementById('recordUserId').value;
+            const courseId = document.getElementById('recordCourseId').value;
+            const progress = document.getElementById('recordProgress').value;
+            const resultDiv = document.getElementById('recordResult');
+
+            try {
+                const response = await fetch('http://localhost:8000/records/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ user_id: userId, course_id: courseId, progress })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || '提交失败');
+
+                resultDiv.innerHTML = `记录添加成功！记录ID：${data.record_id}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">错误：${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
